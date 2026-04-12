@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LILA BLACK — Player Journey Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #080a0e;
+  --panel:    #0d1117;
+  --border:   #1e2530;
+  --border2:  #2a3444;
+  --text:     #c8d4e0;
+  --dim:      #5a6a7e;
+  --accent:   #e8333a;
+  --accent2:  #ff7b2f;
+  --blue:     #3a8fe8;
+  --yellow:   #f5c842;
+  --purple:   #9b59ff;
+  --green:    #2ecc71;
+  --font-hud: 'Rajdhani', sans-serif;
+  --font-mono:'Share Tech Mono', monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:var(--font-hud); }
+
+/* ── LOADING ── */
+#loading {
+  position:fixed; inset:0; background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:999; gap:20px;
+}
+.loader-ring {
+  width:52px; height:52px;
+  border:2px solid var(--border2);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.load-text { font-family:var(--font-mono); font-size:13px; color:var(--dim); letter-spacing:2px; }
+.load-sub { font-size:11px; color:#333; font-family:var(--font-mono); }
+
+/* ── APP SHELL ── */
+#app { display:flex; flex-direction:column; height:100%; }
+
+/* ── HEADER ── */
+header {
+  background:var(--panel);
+  border-bottom:1px solid var(--border);
+  padding:0 16px;
+  height:44px;
+  display:flex; align-items:center; gap:16px;
+  flex-shrink:0;
+}
+.logo {
+  font-size:17px; font-weight:700; letter-spacing:3px;
+  color:var(--accent); text-transform:uppercase;
+  display:flex; align-items:center; gap:8px;
+}
+.logo::before { content:''; width:8px; height:8px; background:var(--accent); border-radius:50%; box-shadow:0 0 8px var(--accent); }
+.header-sub { font-size:11px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; }
+.header-stats { margin-left:auto; font-family:var(--font-mono); font-size:11px; color:var(--dim); }
+.header-badge {
+  background:#1a0a0b; border:1px solid #3a1215; color:var(--accent);
+  padding:2px 8px; border-radius:2px; font-size:10px; letter-spacing:1px;
+  text-transform:uppercase;
+}
+
+/* ── BODY ── */
+.body-row { display:flex; flex:1; overflow:hidden; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width:240px; flex-shrink:0;
+  background:var(--panel);
+  border-right:1px solid var(--border);
+  overflow-y:auto; overflow-x:hidden;
+  display:flex; flex-direction:column; gap:0;
+}
+.sidebar::-webkit-scrollbar { width:4px; }
+.sidebar::-webkit-scrollbar-track { background:transparent; }
+.sidebar::-webkit-scrollbar-thumb { background:var(--border2); }
+
+.s-section { border-bottom:1px solid var(--border); padding:12px 14px; }
+.s-title {
+  font-size:9px; letter-spacing:2px; text-transform:uppercase;
+  color:var(--dim); margin-bottom:10px;
+  display:flex; align-items:center; gap:6px;
+}
+.s-title::before { content:''; flex:1; height:1px; background:var(--border); }
+
+/* Selects */
+.field { margin-bottom:8px; }
+.field label { font-size:10px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; display:block; margin-bottom:4px; }
+select {
+  width:100%; background:#0a0e14; border:1px solid var(--border2);
+  color:var(--text); padding:6px 8px; border-radius:3px;
+  font-size:12px; font-family:var(--font-hud);
+  cursor:pointer; outline:none; transition:border-color 0.2s;
+}
+select:focus, select:hover { border-color:var(--accent); }
+select option { background:#0d1117; }
+
+/* Stats */
+.stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.stat-box {
+  background:#0a0e14; border:1px solid var(--border);
+  border-radius:3px; padding:7px 8px;
+}
+.stat-box .sv { font-family:var(--font-mono); font-size:18px; color:var(--accent2); line-height:1; }
+.stat-box .sk { font-size:9px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
+.stat-box.blue .sv { color:var(--blue); }
+.stat-box.green .sv { color:var(--green); }
+.stat-box.purple .sv { color:var(--purple); }
+
+/* Layer toggles */
+.layer-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:5px 0; cursor:pointer;
+}
+.layer-row:hover .ll { color:var(--text); }
+.ll { font-size:12px; color:var(--dim); display:flex; align-items:center; gap:8px; transition:color 0.15s; }
+.ll.active { color:var(--text); }
+.swatch { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+
+.tog {
+  width:30px; height:15px; background:#1a2030;
+  border:1px solid var(--border2); border-radius:8px;
+  position:relative; cursor:pointer; transition:background 0.2s, border-color 0.2s;
+  flex-shrink:0;
+}
+.tog.on { background:#2a0c0e; border-color:var(--accent); }
+.tog::after {
+  content:''; width:11px; height:11px; background:var(--dim);
+  border-radius:50%; position:absolute; top:1px; left:1px;
+  transition:left 0.2s, background 0.2s;
+}
+.tog.on::after { left:16px; background:var(--accent); }
+
+/* Heatmap button */
+.hm-btn {
+  width:100%; padding:7px 10px; margin-top:6px;
+  background:#0a0e14; border:1px solid var(--border2);
+  color:var(--dim); font-family:var(--font-hud); font-size:12px;
+  letter-spacing:1px; cursor:pointer; border-radius:3px;
+  text-transform:uppercase; transition:all 0.2s;
+}
+.hm-btn:hover { border-color:var(--accent2); color:var(--accent2); }
+.hm-btn.active { background:#1a0d00; border-color:var(--accent2); color:var(--accent2); }
+
+/* Legend */
+.leg { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--dim); padding:3px 0; }
+.leg-ic { font-size:13px; width:18px; text-align:center; }
+
+/* ── MAP AREA ── */
+.map-area { flex:1; display:flex; flex-direction:column; overflow:hidden; position:relative; }
+#mapContainer {
+  flex:1; position:relative;
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden; background:#05070a;
+}
+#mapWrapper { position:relative; display:inline-block; }
+#mapImage { display:block; max-width:100%; max-height:100%; }
+#mainCanvas { position:absolute; top:0; left:0; pointer-events:none; }
+
+.empty-state {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:12px; color:var(--dim);
+}
+.empty-state .big { font-size:48px; opacity:0.2; }
+.empty-state p { font-size:13px; letter-spacing:1px; text-transform:uppercase; }
+
+/* ── TIMELINE ── */
+.timeline {
+  background:var(--panel); border-top:1px solid var(--border);
+  padding:8px 14px; display:flex; align-items:center; gap:12px;
+  flex-shrink:0; height:46px;
+}
+.play-btn {
+  background:var(--accent); border:none; color:white;
+  padding:5px 14px; border-radius:2px; cursor:pointer;
+  font-family:var(--font-hud); font-size:12px; font-weight:700;
+  letter-spacing:1px; text-transform:uppercase; transition:background 0.2s;
+  white-space:nowrap; flex-shrink:0;
+}
+.play-btn:hover { background:#ff4a50; }
+.time-disp { font-family:var(--font-mono); font-size:11px; color:var(--dim); white-space:nowrap; flex-shrink:0; min-width:90px; }
+input[type=range] {
+  flex:1; height:4px; -webkit-appearance:none; appearance:none;
+  background:var(--border2); border-radius:2px; cursor:pointer; outline:none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none; width:14px; height:14px;
+  background:var(--accent); border-radius:50%; cursor:pointer;
+  box-shadow:0 0 6px var(--accent);
+}
+.tl-label { font-size:10px; color:var(--dim); letter-spacing:1px; text-transform:uppercase; flex-shrink:0; }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="loader-ring"></div>
+  <div class="load-text">LOADING LILA BLACK DATA</div>
+  <div class="load-sub">parsing telemetry...</div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;">
+  <header>
+    <div class="logo">LILA BLACK</div>
+    <div class="header-sub">Player Journey Visualization</div>
+    <div class="header-badge">INTERNAL TOOL</div>
+    <div class="header-stats" id="headerStats"></div>
+  </header>
+
+  <div class="body-row">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- FILTERS -->
+      <div class="s-section">
+        <div class="s-title">Filters</div>
+        <div class="field">
+          <label>Map</label>
+          <select id="mapFilter">
+            <option value="">All Maps</option>
+            <option value="AmbroseValley">Ambrose Valley</option>
+            <option value="GrandRift">Grand Rift</option>
+            <option value="Lockdown">Lockdown</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <select id="dateFilter">
+            <option value="">All Dates</option>
+            <option value="February_10">Feb 10</option>
+            <option value="February_11">Feb 11</option>
+            <option value="February_12">Feb 12</option>
+            <option value="February_13">Feb 13</option>
+            <option value="February_14">Feb 14</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Match</label>
+          <select id="matchFilter"><option value="">— Select a match —</option></select>
+        </div>
+      </div>
+
+      <!-- MATCH STATS -->
+      <div class="s-section" id="statsSection" style="display:none;">
+        <div class="s-title">Match Stats</div>
+        <div class="stat-grid" id="statGrid"></div>
+      </div>
+
+      <!-- LAYERS -->
+      <div class="s-section">
+        <div class="s-title">Layers</div>
+        <div class="layer-row" onclick="toggleLayer('humanPaths')">
+          <span class="ll active" id="ll-humanPaths"><span class="swatch" style="background:var(--blue)"></span>Human Paths</span>
+          <div class="tog on" id="tog-humanPaths"></div>
+        </div>
+        <div class="layer-row" onclick="toggleLayer('botPaths')">
+          <span class="ll active" id="ll-botPaths"><span class="swatch" style="background:#556"></span>Bot Paths</span>
+          <div class="tog on" id="tog-botPaths"></div>
+        </div>
+        <div class="layer-row" onclick="toggleLayer('kills')">
+          <span class="ll active" id="ll-kills"><span class="swatch" style="background:var(--accent)"></span>Kills</span>
+          <div class="tog on" id="tog-kills"></div>
+        </div>
+        <div class="layer-row" onclick="toggleLayer('deaths')">
+          <span class="ll active" id="ll-deaths"><span class="swatch" style="background:var(--accent2)"></span>Deaths</span>
+          <div class="tog on" id="tog-deaths"></div>
+        </div>
+        <div class="layer-row" onclick="toggleLayer('loot')">
+          <span class="ll active" id="ll-loot"><span class="swatch" style="background:var(--yellow)"></span>Loot</span>
+          <div class="tog on" id="tog-loot"></div>
+        </div>
+        <div class="layer-row" onclick="toggleLayer('storm')">
+          <span class="ll active" id="ll-storm"><span class="swatch" style="background:var(--purple)"></span>Storm Deaths</span>
+          <div class="tog on" id="tog-storm"></div>
+        </div>
+        <button class="hm-btn" id="hmBtn" onclick="toggleHeatmap()">🔥 Heatmap Overlay</button>
+      </div>
+
+      <!-- LEGEND -->
+      <div class="s-section">
+        <div class="s-title">Legend</div>
+        <div class="leg"><span class="leg-ic" style="color:var(--accent)">✕</span>Kill (human vs human)</div>
+        <div class="leg"><span class="leg-ic" style="color:var(--accent);font-size:10px">⊕</span>Bot Kill</div>
+        <div class="leg"><span class="leg-ic">💀</span>Death</div>
+        <div class="leg"><span class="leg-ic" style="color:var(--yellow)">◆</span>Loot Pickup</div>
+        <div class="leg"><span class="leg-ic" style="color:var(--purple)">◉</span>Storm Death</div>
+        <div class="leg"><span class="leg-ic" style="color:var(--blue)">━</span>Human Path</div>
+        <div class="leg"><span class="leg-ic" style="color:#556">━</span>Bot Path</div>
+      </div>
+
+    </div>
+
+    <!-- MAP + TIMELINE -->
+    <div class="map-area">
+      <div id="mapContainer">
+        <div class="empty-state" id="emptyState">
+          <div class="big">🗺</div>
+          <p>Select a match to begin</p>
+        </div>
+        <div id="mapWrapper" style="display:none;">
+          <img id="mapImage" alt="minimap" />
+          <canvas id="mainCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="timeline">
+        <button class="play-btn" id="playBtn" onclick="togglePlayback()">▶ Play</button>
+        <div class="time-disp" id="timeDisp">0:00 / 0:00</div>
+        <input type="range" id="timeSlider" min="0" max="100" value="100" oninput="onSlider(this.value)">
+        <div class="tl-label">Timeline</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let allMatches = [], allEvents = [], allPositions = [];
+let curEvents = [], curPositions = [];
+let curMinTime = 0, curMaxTime = 100;
+let layers = { humanPaths:true, botPaths:true, kills:true, deaths:true, loot:true, storm:true };
+let showHeatmap = false;
+let isPlaying = false, playTimer = null;
+let scale = 1;
+
+const canvas   = document.getElementById('mainCanvas');
+const ctx      = canvas.getContext('2d');
+const mapImg   = document.getElementById('mapImage');
+const slider   = document.getElementById('timeSlider');
+
+// ═══════════════════════════════════════════
+// LOAD DATA
+// ═══════════════════════════════════════════
+async function init() {
+  try {
+    const [m, e, p] = await Promise.all([
+      fetch('data/matches.json').then(r => r.json()),
+      fetch('data/events.json').then(r => r.json()),
+      fetch('data/positions.json').then(r => r.json()),
+    ]);
+    allMatches   = m;
+    allEvents    = e;
+    allPositions = p;
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    document.getElementById('headerStats').textContent =
+      `${allMatches.length} MATCHES  ·  ${allEvents.length} EVENTS  ·  FEB 10–14 2026`;
+
+    populateMatches();
+  } catch(err) {
+    document.querySelector('.load-text').textContent = '⚠ Failed to load data';
+    document.querySelector('.load-sub').textContent  = 'Make sure data/ folder is next to index.html';
+    console.error(err);
+  }
+}
+
+// ═══════════════════════════════════════════
+// DROPDOWNS
+// ═══════════════════════════════════════════
+function populateMatches() {
+  const mapF  = document.getElementById('mapFilter').value;
+  const dateF = document.getElementById('dateFilter').value;
+  const sel   = document.getElementById('matchFilter');
+
+  let list = allMatches;
+  if (mapF)  list = list.filter(m => m.map_id === mapF);
+  if (dateF) list = list.filter(m => m.day    === dateF);
+  list = list.sort((a,b) => a.match_id_clean.localeCompare(b.match_id_clean));
+
+  sel.innerHTML = `<option value="">— ${list.length} matches available —</option>`;
+  list.forEach(m => {
+    const o = document.createElement('option');
+    o.value = m.match_id_clean;
+    const dateStr = m.day.replace('_',' ');
+    o.textContent = `${m.map_id} · ${dateStr} · ${m.human_players}H ${m.bot_players}B`;
+    sel.appendChild(o);
+  });
+}
+
+document.getElementById('mapFilter').addEventListener('change', populateMatches);
+document.getElementById('dateFilter').addEventListener('change', populateMatches);
+document.getElementById('matchFilter').addEventListener('change', loadMatch);
+
+// ═══════════════════════════════════════════
+// LOAD A MATCH
+// ═══════════════════════════════════════════
+function loadMatch() {
+  const id = document.getElementById('matchFilter').value;
+  if (!id) return;
+  stopPlayback();
+
+  const info = allMatches.find(m => m.match_id_clean === id);
+  if (!info) return;
+
+  curEvents    = allEvents.filter(e => e.match_id_clean === id);
+  curPositions = allPositions.filter(p => p.match_id_clean === id);
+
+  const allTimes = [...curPositions.map(p=>p.ts_ms), ...curEvents.map(e=>e.ts_ms)];
+  curMinTime = Math.min(...allTimes);
+  curMaxTime = Math.max(...allTimes);
+
+  slider.min   = curMinTime;
+  slider.max   = curMaxTime;
+  slider.value = curMaxTime;
+  updateTimeDisp(curMaxTime);
+
+  showStats(info);
+  loadMapImage(info.map_id);
+}
+
+function showStats(info) {
+  const kills  = allEvents.filter(e => e.match_id_clean === info.match_id_clean && (e.event==='Kill'||e.event==='BotKill')).length;
+  const loots  = allEvents.filter(e => e.match_id_clean === info.match_id_clean && e.event==='Loot').length;
+  const storms = allEvents.filter(e => e.match_id_clean === info.match_id_clean && e.event==='KilledByStorm').length;
+
+  document.getElementById('statsSection').style.display = 'block';
+  document.getElementById('statGrid').innerHTML = `
+    <div class="stat-box blue"><div class="sv">${info.human_players}</div><div class="sk">Humans</div></div>
+    <div class="stat-box"><div class="sv">${info.bot_players}</div><div class="sk">Bots</div></div>
+    <div class="stat-box"><div class="sv">${kills}</div><div class="sk">Kills</div></div>
+    <div class="stat-box green"><div class="sv">${loots}</div><div class="sk">Loots</div></div>
+    <div class="stat-box purple" style="grid-column:1/-1;"><div class="sv">${storms}</div><div class="sk">Storm Deaths</div></div>
+  `;
+}
+
+// ═══════════════════════════════════════════
+// MAP IMAGE
+// ═══════════════════════════════════════════
+const MAP_IMAGES = {
+  AmbroseValley: 'minimaps/AmbroseValley_Minimap.png',
+  GrandRift:     'minimaps/GrandRift_Minimap.png',
+  Lockdown:      'minimaps/Lockdown_Minimap.jpg',
+};
+
+function loadMapImage(mapId) {
+  document.getElementById('emptyState').style.display  = 'none';
+  document.getElementById('mapWrapper').style.display = 'inline-block';
+
+  mapImg.onload = () => {
+    resizeCanvas();
+    renderAll();
+  };
+  mapImg.src = MAP_IMAGES[mapId] || MAP_IMAGES.AmbroseValley;
+}
+
+// ═══════════════════════════════════════════
+// CANVAS
+// ═══════════════════════════════════════════
+function resizeCanvas() {
+  canvas.width  = mapImg.offsetWidth;
+  canvas.height = mapImg.offsetHeight;
+  scale = mapImg.offsetWidth / 1024;
+}
+window.addEventListener('resize', () => {
+  if (mapImg.naturalWidth) { resizeCanvas(); renderAll(); }
+});
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function renderAll() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const t = parseFloat(slider.value);
+  const s = scale;
+
+  const filtPos = curPositions.filter(p => p.ts_ms <= t);
+  const filtEv  = curEvents.filter(e => e.ts_ms <= t);
+
+  // 1) Heatmap
+  if (showHeatmap) drawHeatmap(filtEv, filtPos, s);
+
+  // 2) Paths
+  if (layers.humanPaths || layers.botPaths) drawPaths(filtPos, s);
+
+  // 3) Events
+  filtEv.forEach(ev => drawEvent(ev, s));
+}
+
+// ─── Paths ───────────────────────────────
+function drawPaths(positions, s) {
+  const byUser = {};
+  positions.forEach(p => { (byUser[p.user_id] = byUser[p.user_id]||[]).push(p); });
+
+  Object.values(byUser).forEach(pts => {
+    const bot = pts[0].is_bot;
+    if (bot  && !layers.botPaths)   return;
+    if (!bot && !layers.humanPaths) return;
+
+    ctx.beginPath();
+    if (bot) {
+      ctx.strokeStyle = 'rgba(80,90,110,0.3)';
+      ctx.lineWidth   = 0.8;
+    } else {
+      ctx.strokeStyle = 'rgba(58,143,232,0.55)';
+      ctx.lineWidth   = 1.4;
+    }
+    pts.forEach((p,i) => i===0 ? ctx.moveTo(p.px*s, p.py*s) : ctx.lineTo(p.px*s, p.py*s));
+    ctx.stroke();
+
+    // Start dot
+    if (!bot && pts.length > 0) {
+      ctx.beginPath();
+      ctx.arc(pts[0].px*s, pts[0].py*s, 3, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(58,143,232,0.8)';
+      ctx.fill();
+    }
+  });
+}
+
+// ─── Events ──────────────────────────────
+function drawEvent(ev, s) {
+  const x = ev.px * s, y = ev.py * s;
+  const e = ev.event;
+
+  ctx.save();
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+
+  if (e === 'Kill' && layers.kills) {
+    drawX(x, y, 7, '#e8333a', 2.2);
+  } else if (e === 'BotKill' && layers.kills) {
+    drawX(x, y, 5, '#ff6060', 1.5);
+  } else if ((e === 'Killed' || e === 'BotKilled') && layers.deaths) {
+    ctx.font = '13px Arial';
+    ctx.shadowColor = '#ff7b2f'; ctx.shadowBlur = 8;
+    ctx.fillText('💀', x, y);
+  } else if (e === 'KilledByStorm' && layers.storm) {
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI*2);
+    ctx.strokeStyle = '#9b59ff';
+    ctx.lineWidth   = 1.5;
+    ctx.shadowColor = '#9b59ff'; ctx.shadowBlur = 10;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5, 0, Math.PI*2);
+    ctx.fillStyle = '#9b59ff';
+    ctx.fill();
+  } else if (e === 'Loot' && layers.loot) {
+    ctx.font = '11px Arial';
+    ctx.shadowColor = '#f5c842'; ctx.shadowBlur = 6;
+    ctx.fillText('◆', x, y);
+  }
+  ctx.restore();
+}
+
+function drawX(x, y, r, color, lw) {
+  ctx.save();
+  ctx.strokeStyle  = color;
+  ctx.lineWidth    = lw;
+  ctx.shadowColor  = color;
+  ctx.shadowBlur   = 8;
+  ctx.lineCap      = 'round';
+  ctx.beginPath(); ctx.moveTo(x-r, y-r); ctx.lineTo(x+r, y+r); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+r, y-r); ctx.lineTo(x-r, y+r); ctx.stroke();
+  ctx.restore();
+}
+
+// ─── Heatmap ─────────────────────────────
+function drawHeatmap(events, positions, s) {
+  const off = document.createElement('canvas');
+  off.width  = canvas.width;
+  off.height = canvas.height;
+  const oc = off.getContext('2d');
+
+  // High-value points: kills
+  const kills = events.filter(e => e.event==='Kill' || e.event==='BotKill' || e.event==='Killed');
+  kills.forEach(p => {
+    const grd = oc.createRadialGradient(p.px*s,p.py*s,0, p.px*s,p.py*s,28);
+    grd.addColorStop(0,   'rgba(255,40,0,0.5)');
+    grd.addColorStop(0.4, 'rgba(255,120,0,0.2)');
+    grd.addColorStop(1,   'rgba(255,0,0,0)');
+    oc.fillStyle = grd;
+    oc.fillRect(p.px*s-30, p.py*s-30, 60, 60);
+  });
+
+  // Low-value: traffic (sampled)
+  const sample = positions.filter((_,i) => i%3===0).slice(0, 3000);
+  sample.forEach(p => {
+    const grd = oc.createRadialGradient(p.px*s,p.py*s,0, p.px*s,p.py*s,12);
+    grd.addColorStop(0,  'rgba(0,180,255,0.06)');
+    grd.addColorStop(1,  'rgba(0,180,255,0)');
+    oc.fillStyle = grd;
+    oc.fillRect(p.px*s-14, p.py*s-14, 28, 28);
+  });
+
+  ctx.globalAlpha = 0.7;
+  ctx.drawImage(off, 0, 0);
+  ctx.globalAlpha = 1;
+}
+
+// ═══════════════════════════════════════════
+// LAYER CONTROLS
+// ═══════════════════════════════════════════
+function toggleLayer(name) {
+  layers[name] = !layers[name];
+  const tog = document.getElementById('tog-'+name);
+  const ll  = document.getElementById('ll-'+name);
+  tog.classList.toggle('on', layers[name]);
+  ll.classList.toggle('active', layers[name]);
+  renderAll();
+}
+
+function toggleHeatmap() {
+  showHeatmap = !showHeatmap;
+  document.getElementById('hmBtn').classList.toggle('active', showHeatmap);
+  renderAll();
+}
+
+// ═══════════════════════════════════════════
+// TIMELINE / PLAYBACK
+// ═══════════════════════════════════════════
+function onSlider(val) {
+  updateTimeDisp(parseFloat(val));
+  renderAll();
+}
+
+function togglePlayback() {
+  isPlaying ? stopPlayback() : startPlayback();
+}
+
+function startPlayback() {
+  if (!curPositions.length) return;
+  isPlaying = true;
+  document.getElementById('playBtn').textContent = '⏸ Pause';
+
+  // Restart if at end
+  if (parseFloat(slider.value) >= curMaxTime - 100) {
+    slider.value = curMinTime;
+  }
+
+  const step = (curMaxTime - curMinTime) / 300; // 300 steps → ~15s at 50ms
+  playTimer = setInterval(() => {
+    let v = parseFloat(slider.value) + step;
+    if (v >= curMaxTime) { v = curMaxTime; stopPlayback(); }
+    slider.value = v;
+    onSlider(v);
+  }, 50);
+}
+
+function stopPlayback() {
+  isPlaying = false;
+  clearInterval(playTimer);
+  document.getElementById('playBtn').textContent = '▶ Play';
+}
+
+function updateTimeDisp(ts) {
+  const elapsed = ts - curMinTime;
+  const total   = curMaxTime - curMinTime;
+  document.getElementById('timeDisp').textContent =
+    `${fmt(elapsed)}  /  ${fmt(total)}`;
+}
+
+function fmt(ms) {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+}
+
+// ═══════════════════════════════════════════
+// START
+// ═══════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
