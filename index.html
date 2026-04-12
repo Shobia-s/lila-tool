@@ -409,11 +409,18 @@ function loadMatch() {
   curEvents    = allEvents.filter(e => e.match_id_clean === id);
   curPositions = allPositions.filter(p => p.match_id_clean === id);
 
-  const allTimes = [...curPositions.map(p=>p.ts_ms), ...curEvents.map(e=>e.ts_ms)];
-  curMinTime = Math.min(...allTimes);
-  curMaxTime = Math.max(...allTimes);
+  // Safely find min/max (avoid spread stack overflow on large arrays)
+  let rawMin = Infinity, rawMax = -Infinity;
+  curPositions.forEach(p => { if(p.ts_ms < rawMin) rawMin=p.ts_ms; if(p.ts_ms > rawMax) rawMax=p.ts_ms; });
+  curEvents.forEach(e    => { if(e.ts_ms < rawMin) rawMin=e.ts_ms; if(e.ts_ms > rawMax) rawMax=e.ts_ms; });
 
-  slider.min   = curMinTime;
+  // Normalize timestamps to 0-based so timeline and playback work correctly
+  curPositions = curPositions.map(p => ({...p, ts_ms: p.ts_ms - rawMin}));
+  curEvents    = curEvents.map(e    => ({...e, ts_ms: e.ts_ms - rawMin}));
+  curMinTime = 0;
+  curMaxTime = (rawMax - rawMin) || 60000;
+
+  slider.min   = 0;
   slider.max   = curMaxTime;
   slider.value = curMaxTime;
   updateTimeDisp(curMaxTime);
