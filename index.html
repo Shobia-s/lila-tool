@@ -468,9 +468,13 @@ function loadMapImage(mapId) {
 // CANVAS
 // ═══════════════════════════════════════════
 function resizeCanvas() {
-  canvas.width  = mapImg.offsetWidth;
-  canvas.height = mapImg.offsetHeight;
-  scale = mapImg.offsetWidth / 1024;
+  const w = mapImg.offsetWidth  || mapImg.naturalWidth  || 1024;
+  const h = mapImg.offsetHeight || mapImg.naturalHeight || 1024;
+  canvas.width  = w;
+  canvas.height = h;
+  canvas.style.width  = w + 'px';
+  canvas.style.height = h + 'px';
+  scale = w / 1024;
 }
 window.addEventListener('resize', () => {
   if (mapImg.naturalWidth) { resizeCanvas(); renderAll(); }
@@ -640,21 +644,32 @@ function togglePlayback() {
 }
 
 function startPlayback() {
-  if (!curPositions.length) return;
+  if (!curPositions.length && !curEvents.length) return;
   isPlaying = true;
   document.getElementById('playBtn').textContent = '⏸ Pause';
 
-  // Restart if at end
-  if (parseFloat(slider.value) >= curMaxTime - 100) {
-    slider.value = curMinTime;
+  // Restart from beginning if at end
+  if (parseFloat(slider.value) >= curMaxTime - 1000) {
+    slider.value = 0;
   }
 
-  const step = (curMaxTime - curMinTime) / 300; // 300 steps → ~15s at 50ms
+  const duration = 20000; // 20 seconds for full match playback in real time
+  const totalRange = curMaxTime - curMinTime;
+  const stepPerFrame = totalRange / (duration / 50);
+
   playTimer = setInterval(() => {
-    let v = parseFloat(slider.value) + step;
-    if (v >= curMaxTime) { v = curMaxTime; stopPlayback(); }
+    let v = parseFloat(slider.value) + stepPerFrame;
+    if (v >= curMaxTime) {
+      v = curMaxTime;
+      slider.value = v;
+      updateTimeDisp(v);
+      renderAll();
+      stopPlayback();
+      return;
+    }
     slider.value = v;
-    onSlider(v);
+    updateTimeDisp(v);
+    renderAll();
   }, 50);
 }
 
