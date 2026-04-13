@@ -2,7 +2,7 @@
 
 A web-based tool for Level Designers to explore player behavior across LILA BLACK's three maps using 5 days of production telemetry data.
 
-**Live URL:** https://venerable-puffpuff-7401e7.netlify.app
+**Live URL:** https://lila-black-shobia-s.netlify.app/
 
 ---
 
